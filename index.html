@@ -61,30 +61,123 @@
         var scene = null;
         var sceneToRender = null;
         var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
-        class Playground {
-            static CreateScene(engine, canvas) {
-                // This creates a basic Babylon Scene object (non-mesh)
-                const scene = new BABYLON.Scene(engine);
-                const camera = new BABYLON.ArcRotateCamera("camera", BABYLON.Tools.ToRadians(90), BABYLON.Tools.ToRadians(65), 10, BABYLON.Vector3.Zero(), scene);
-                // This attaches the camera to the canvas
-                camera.attachControl(canvas, true);
-                // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-                const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
-                // Default intensity is 1. Let's dim the light a small amount
-                light.intensity = 0.7;
-                // Our built-in 'ground' shape. Params: name, options, scene
-                const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 6, height: 6 }, scene);
-                const groundMaterial = new BABYLON.StandardMaterial("Ground Material", scene);
-                const groundTexture = new BABYLON.Texture(Assets.textures.wood_jpg.path, scene);
-                groundMaterial.diffuseTexture = groundTexture;
-                ground.material = groundMaterial;
-                BABYLON.SceneLoader.ImportMesh("", Assets.meshes.tree1_glb.rootUrl, Assets.meshes.tree1_glb.filename, scene, function (newMeshes) {
-                    newMeshes[0].scaling = new BABYLON.Vector3(0.2, 0.2, 0.2);
-                });
-                return scene;
-            }
+        const createScene =  () => {
+    const scene = new BABYLON.Scene(engine);
+
+    /**** Set camera and light *****/
+
+    //const camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 10, -10), scene);
+    //camera.setTarget(BABYLON.Vector3.Zero());
+    //camera.inputs.addMouseWheel();
+    //camera.attachControl(canvas, true);
+
+    const camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, new BABYLON.Vector3(0, 0, 0), scene);
+    camera.setPosition(new BABYLON.Vector3(0, 10, 10));
+    camera.attachControl(canvas, true);
+    camera.lowerBetaLimit = 0.1;
+    camera.upperBetaLimit = (Math.PI / 2) * 0.99;
+    camera.lowerRadiusLimit = 5;
+    camera.upperRadiusLimit = 20;
+
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0));
+
+    const boxTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/floor.png");
+    const spacing = 0.01;
+    const boxDimensions = new BABYLON.Vector3(1, 0.63, 1.26);
+    const rows = 5, cols = 5;
+
+    const gridWidth = (boxDimensions.x * cols) + (spacing * (cols - 1));
+    const gridDepth = (boxDimensions.z * rows) + (spacing * (rows - 1));
+
+    const gridOffest = new BABYLON.Vector3(gridWidth / 2 - (boxDimensions.x / 2), 0, gridDepth / 2 - (boxDimensions.z / 2));
+
+    // https://forum.babylonjs.com/t/catch-user-clicked-mesh-and-do-something/28794
+    const clickHandler = function (mesh) {
+        mesh.actionManager = new BABYLON.ActionManager(scene);
+        //mesh.actionManager.registerAction(new BABYLON.SwitchBooleanAction(BABYLON.ActionManager.OnPickTrigger, mesh.material, "wireframe"));
+
+        mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, mesh.material, "emissiveColor", mesh.material.emissiveColor));
+        mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, mesh.material, "emissiveColor", BABYLON.Color3.FromHSV(270, 1.0, 1.0)));
+
+        mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function (event) {
+            //const isEnabled = event.source.subMeshes[0].isEnabled;
+            //event.source.subMeshes[0].isEnabled = !isEnabled;
+
+            //const highlight = new BABYLON.HighlightLayer("highlight", scene, { camera: camera });
+            //highlight.isEnabled = false;
+	        //highlight.addMesh(event.source, BABYLON.Color3.Red());
+        }));
+    }
+
+
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const box = BABYLON.MeshBuilder.CreateBox("box", {
+                height: boxDimensions.y,
+                width: boxDimensions.x,
+                depth: boxDimensions.z
+            });
+            box.position.x = (boxDimensions.x + spacing) * col - gridOffest.x;
+            box.position.z = (boxDimensions.z + spacing) * row - gridOffest.z;
+            box.position.y = boxDimensions.y * 0.5;
+
+            const boxMat = new BABYLON.StandardMaterial("boxMat");
+            boxMat.diffuseTexture = boxTexture;
+            box.material = boxMat;
+
+            //const highlight = new BABYLON.HighlightLayer("highlight", scene, { camera: camera });
+            //highlight.isEnabled = false;
+	        //highlight.addMesh(box, BABYLON.Color3.Red());
+
+            clickHandler(box);
         }
-        createScene = function() { return Playground.CreateScene(engine, engine.getRenderingCanvas()); }
+    }
+
+    const rows2 = 4, cols2 = 4;
+    const gridWidth2 = (boxDimensions.x * cols2) + (spacing * (cols2 - 1));
+    const gridDepth2 = (boxDimensions.z * rows2) + (spacing * (rows2 - 1));
+
+    const gridOffest2 = new BABYLON.Vector3(gridWidth2 / 2 - (boxDimensions.x / 2), 0, gridDepth2 / 2 - (boxDimensions.z / 2));
+
+    for (let row = 0; row < rows2; row++) {
+        for (let col = 0; col < cols2; col++) {
+            const box = BABYLON.MeshBuilder.CreateBox("box", { height: boxDimensions.y, width: boxDimensions.x, depth: boxDimensions.z });
+            box.position.x = (boxDimensions.x + spacing) * col - gridOffest2.x;
+            box.position.z = (boxDimensions.z + spacing) * row - gridOffest2.z;
+            box.position.y = boxDimensions.y * 1.5;
+            
+            const boxMat = new BABYLON.StandardMaterial("boxMat");
+            boxMat.diffuseTexture = boxTexture;
+            box.material = boxMat;
+
+            //const highlight = new BABYLON.HighlightLayer("highlight", scene, { camera: camera });
+            //highlight.isEnabled = false;
+	        //highlight.addMesh(box, BABYLON.Color3.Red());
+
+            clickHandler(box);
+        }
+    }
+
+    // Origin
+    const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", { diameter: 0.5, segments: 32 }, scene);
+    const sphereMaterial = new BABYLON.StandardMaterial("Sphere Material", scene);
+    sphereMaterial.diffuseColor = BABYLON.Color3.Red();
+    sphere.material = sphereMaterial;
+    
+    // Ground
+    const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 8, height: 8 }, scene);
+    const groundMaterial = new BABYLON.StandardMaterial("Ground Material", scene);
+    const groundTexture = new BABYLON.Texture(Assets.textures.grass_png.path, scene);
+    groundMaterial.diffuseTexture = groundTexture;
+    ground.material = groundMaterial;
+    
+    return scene; /* https://playground.babylonjs.com/#J19GYK#0 */
+}
+
+/* https://github.com/FluffyStuff/riichi-mahjong-tiles/tree/master */
+/* https://www.istockphoto.com/vector/mahjong-gm484719523-38520470 */
+/* https://www.istockphoto.com/vector/complete-mahjong-set-gm894343942-247266900 */
+/* https://www.123rf.com/photo_143062594_mahjong-tiles.html */
                 window.initFunction = async function() {
                     
                     
@@ -101,7 +194,7 @@
                     window.engine = await asyncEngineCreation();
         if (!engine) throw 'engine should not be null.';
         startRenderLoop(engine, canvas);
-window.scene = createScene();};
+        window.scene = createScene();};
         initFunction().then(() => {sceneToRender = scene                    
         });
 
